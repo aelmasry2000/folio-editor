@@ -1,45 +1,42 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>FOLIO Cataloging Editor</title>
+  <title>Catalog New Instance in FOLIO</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       max-width: 600px;
       margin: auto;
       padding: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
+      text-align: center;
     }
     input, button {
       width: 100%;
       padding: 10px;
-      margin-top: 5px;
+      margin-top: 10px;
     }
-    .small {
-      font-size: 0.9em;
-      color: #555;
+    label {
+      display: block;
+      text-align: left;
+      margin-top: 15px;
     }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <h2>Catalog New Instance in FOLIO</h2>
+  <h1>Catalog New Instance in FOLIO</h1>
+  <div id="loginStatus">⏳ Logging in...</div>
 
-  <div id="loginStatus" class="small">⏳ Logging in...</div>
-
-  <form id="catalogForm" style="margin-top: 20px; display: none;">
+  <form id="catalogForm" class="hidden">
     <label>Title:
-      <input type="text" id="title" required>
+      <input type="text" id="title" required />
     </label>
     <label>Contributor:
-      <input type="text" id="contributor">
+      <input type="text" id="contributor" />
     </label>
     <label>ISBN:
-      <input type="text" id="isbn">
+      <input type="text" id="isbn" />
     </label>
     <button type="submit">📥 Save Record</button>
   </form>
@@ -48,34 +45,38 @@
 
   <script>
     let okapiToken = "";
+    const proxyUrl = "https://corsproxy.io/?";
+    const loginUrl = "https://folio-snapshot.dev.folio.org/authn/login";
+    const instanceUrl = "https://folio-snapshot.dev.folio.org/inventory/instances";
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      const loginResponse = await fetch('https://folio-snapshot.dev.folio.org/authn/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Okapi-Tenant': 'diku'
-        },
-        body: JSON.stringify({ username: 'diku_admin', password: 'admin' })
-      });
+    async function login() {
+      try {
+        const res = await fetch(proxyUrl + encodeURIComponent(loginUrl), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Okapi-Tenant": "diku"
+          },
+          body: JSON.stringify({ username: "diku_admin", password: "admin" })
+        });
 
-      const statusBox = document.getElementById('loginStatus');
-
-      if (loginResponse.ok) {
-        okapiToken = loginResponse.headers.get('x-okapi-token');
-        statusBox.innerText = '✅ Logged in as diku_admin';
-        document.getElementById('catalogForm').style.display = 'block';
-      } else {
-        const error = await loginResponse.text();
-        statusBox.innerHTML = `<span style='color:red'>❌ Login failed: ${error}</span>`;
+        okapiToken = res.headers.get("x-okapi-token");
+        if (res.ok && okapiToken) {
+          document.getElementById("loginStatus").textContent = "✅ Logged in";
+          document.getElementById("catalogForm").classList.remove("hidden");
+        } else {
+          document.getElementById("loginStatus").innerHTML = `❌ Login failed.<br>Status: ${res.status}`;
+        }
+      } catch (err) {
+        document.getElementById("loginStatus").innerHTML = `❌ JavaScript Error: ${err}`;
       }
-    });
+    }
 
-    document.getElementById('catalogForm').addEventListener('submit', async (e) => {
+    document.getElementById("catalogForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const title = document.getElementById('title').value;
-      const contributor = document.getElementById('contributor').value;
-      const isbn = document.getElementById('isbn').value;
+      const title = document.getElementById("title").value;
+      const contributor = document.getElementById("contributor").value;
+      const isbn = document.getElementById("isbn").value;
 
       const instance = {
         title,
@@ -90,27 +91,33 @@
         instanceTypeId: "6312d172-f0cf-40f6-b27d-9fa8feaf332f"
       };
 
-      const resBox = document.getElementById('responseBox');
-      resBox.innerHTML = "⏳ Saving...";
+      const responseBox = document.getElementById("responseBox");
+      responseBox.innerHTML = "⏳ Saving...";
 
-      const response = await fetch('https://folio-snapshot.dev.folio.org/inventory/instances', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Okapi-Tenant': 'diku',
-          'X-Okapi-Token': okapiToken
-        },
-        body: JSON.stringify(instance)
-      });
+      try {
+        const response = await fetch(proxyUrl + encodeURIComponent(instanceUrl), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Okapi-Tenant": "diku",
+            "X-Okapi-Token": okapiToken
+          },
+          body: JSON.stringify(instance)
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-        resBox.innerHTML = `✅ Saved! Instance ID: <code>${result.id}</code>`;
-      } else {
-        const error = await response.text();
-        resBox.innerHTML = `<span style='color:red'>❌ Error: ${error}</span>`;
+        if (response.ok) {
+          const result = await response.json();
+          responseBox.innerHTML = `✅ Saved!<br>Instance ID: <code>${result.id}</code>`;
+        } else {
+          const error = await response.text();
+          responseBox.innerHTML = `<span style='color:red'>❌ Error: ${error}</span>`;
+        }
+      } catch (err) {
+        responseBox.innerHTML = `<span style='color:red'>❌ JavaScript Error: ${err}</span>`;
       }
     });
+
+    login();
   </script>
 </body>
 </html>
