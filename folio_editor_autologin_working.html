@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FOLIO Cataloging Editor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+    }
+    .small {
+      font-size: 0.9em;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h2>Catalog New Instance in FOLIO</h2>
+
+  <div id="loginStatus" class="small">⏳ Logging in...</div>
+
+  <form id="catalogForm" style="margin-top: 20px; display: none;">
+    <label>Title:
+      <input type="text" id="title" required>
+    </label>
+    <label>Contributor:
+      <input type="text" id="contributor">
+    </label>
+    <label>ISBN:
+      <input type="text" id="isbn">
+    </label>
+    <button type="submit">📥 Save Record</button>
+  </form>
+
+  <div id="responseBox" style="margin-top: 20px;"></div>
+
+  <script>
+    let okapiToken = "";
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const loginResponse = await fetch('https://folio-snapshot.dev.folio.org/authn/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Okapi-Tenant': 'diku'
+        },
+        body: JSON.stringify({ username: 'diku_admin', password: 'admin' })
+      });
+
+      const statusBox = document.getElementById('loginStatus');
+
+      if (loginResponse.ok) {
+        okapiToken = loginResponse.headers.get('x-okapi-token');
+        statusBox.innerText = '✅ Logged in as diku_admin';
+        document.getElementById('catalogForm').style.display = 'block';
+      } else {
+        const error = await loginResponse.text();
+        statusBox.innerHTML = `<span style='color:red'>❌ Login failed: ${error}</span>`;
+      }
+    });
+
+    document.getElementById('catalogForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const contributor = document.getElementById('contributor').value;
+      const isbn = document.getElementById('isbn').value;
+
+      const instance = {
+        title,
+        identifiers: isbn ? [{
+          identifierTypeId: "8261054f-be78-422d-bd51-4ed9f33c3422",
+          value: isbn
+        }] : [],
+        contributors: contributor ? [{
+          name: contributor,
+          contributorNameTypeId: "2b94c631-fca9-4892-a730-03ee529ffe27"
+        }] : [],
+        instanceTypeId: "6312d172-f0cf-40f6-b27d-9fa8feaf332f"
+      };
+
+      const resBox = document.getElementById('responseBox');
+      resBox.innerHTML = "⏳ Saving...";
+
+      const response = await fetch('https://folio-snapshot.dev.folio.org/inventory/instances', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Okapi-Tenant': 'diku',
+          'X-Okapi-Token': okapiToken
+        },
+        body: JSON.stringify(instance)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        resBox.innerHTML = `✅ Saved! Instance ID: <code>${result.id}</code>`;
+      } else {
+        const error = await response.text();
+        resBox.innerHTML = `<span style='color:red'>❌ Error: ${error}</span>`;
+      }
+    });
+  </script>
+</body>
+</html>
