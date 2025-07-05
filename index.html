@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>FOLIO Manual Login Cataloging</title>
+  <title>FOLIO Manual Login Cataloging (Thingproxy)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -57,7 +57,7 @@
 
   <script>
     let okapiToken = "";
-    const proxyUrl = "https://corsproxy.io/?";
+    const proxyUrl = "https://thingproxy.freeboard.io/fetch/";
     const loginUrl = "https://folio-snapshot.dev.folio.org/authn/login";
     const instanceUrl = "https://folio-snapshot.dev.folio.org/inventory/instances";
 
@@ -68,7 +68,7 @@
       const statusBox = document.getElementById("loginStatus");
 
       try {
-        const res = await fetch(proxyUrl + encodeURIComponent(loginUrl), {
+        const res = await fetch(proxyUrl + loginUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -113,7 +113,7 @@
       responseBox.innerHTML = "⏳ Saving...";
 
       try {
-        const response = await fetch(proxyUrl + encodeURIComponent(instanceUrl), {
+        const response = await fetch(proxyUrl + instanceUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
