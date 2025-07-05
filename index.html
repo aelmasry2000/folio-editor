@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Catalog New Instance in FOLIO</title>
+  <title>FOLIO Manual Login Cataloging</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -25,8 +26,19 @@
   </style>
 </head>
 <body>
-  <h1>Catalog New Instance in FOLIO</h1>
-  <div id="loginStatus">⏳ Logging in...</div>
+  <h1>FOLIO Cataloging Editor (Manual Login)</h1>
+
+  <form id="loginForm">
+    <label>Username:
+      <input type="text" id="username" value="diku_admin" required />
+    </label>
+    <label>Password:
+      <input type="password" id="password" value="admin" required />
+    </label>
+    <button type="submit">🔐 Login</button>
+  </form>
+
+  <div id="loginStatus" style="margin-top: 10px;"></div>
 
   <form id="catalogForm" class="hidden">
     <label>Title:
@@ -49,7 +61,12 @@
     const loginUrl = "https://folio-snapshot.dev.folio.org/authn/login";
     const instanceUrl = "https://folio-snapshot.dev.folio.org/inventory/instances";
 
-    async function login() {
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const statusBox = document.getElementById("loginStatus");
+
       try {
         const res = await fetch(proxyUrl + encodeURIComponent(loginUrl), {
           method: "POST",
@@ -57,20 +74,21 @@
             "Content-Type": "application/json",
             "X-Okapi-Tenant": "diku"
           },
-          body: JSON.stringify({ username: "diku_admin", password: "admin" })
+          body: JSON.stringify({ username, password })
         });
 
         okapiToken = res.headers.get("x-okapi-token");
         if (res.ok && okapiToken) {
-          document.getElementById("loginStatus").textContent = "✅ Logged in";
+          statusBox.textContent = "✅ Logged in";
           document.getElementById("catalogForm").classList.remove("hidden");
         } else {
-          document.getElementById("loginStatus").innerHTML = `❌ Login failed.<br>Status: ${res.status}`;
+          const error = await res.text();
+          statusBox.innerHTML = `❌ Login failed. <br>Status: ${res.status}<br>${error}`;
         }
       } catch (err) {
-        document.getElementById("loginStatus").innerHTML = `❌ JavaScript Error: ${err}`;
+        statusBox.innerHTML = `❌ JavaScript Error: ${err}`;
       }
-    }
+    });
 
     document.getElementById("catalogForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -116,8 +134,6 @@
         responseBox.innerHTML = `<span style='color:red'>❌ JavaScript Error: ${err}</span>`;
       }
     });
-
-    login();
   </script>
 </body>
 </html>
